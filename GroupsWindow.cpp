@@ -107,7 +107,7 @@ void GroupsWindow::updateLabel()
    statusLabel->setText(tr("Refreshing..."));
    QApplication::processEvents();
 
-   QString msg = QString("Total count: %1").arg(AddressBookDAO::getGroupsCount());
+   QString msg = QString(tr("Total count: %1")).arg(AddressBookDAO::getGroupsCount());
    statusLabel->setText(msg);
 }
 

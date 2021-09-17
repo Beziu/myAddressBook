@@ -10,9 +10,6 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    AddressBookContact.cpp \
-    AddressBookDAO.cpp \
-    AddressBookGroup.cpp \
     BirthdayDialog.cpp \
     BirthdayWindow.cpp \
     ContactDialog.cpp \
@@ -22,9 +19,6 @@ SOURCES += \
     MainWindow.cpp
 
 HEADERS += \
-    AddressBookContact.h \
-    AddressBookDAO.h \
-    AddressBookGroup.h \
     BirthdayDialog.h \
     BirthdayWindow.h \
     ContactDialog.h \
@@ -40,16 +34,19 @@ FORMS += \
     GroupsWindow.ui \
     MainWindow.ui
 
+TRANSLATIONS = \
+    AddressBook_en.ts
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_1_0_MinGW_64_bit-Debug/release/ -lDAOLib
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_1_0_MinGW_64_bit-Debug/debug/ -lDAOLib
+DISTFILES += \
+   Readme.md
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/release/ -lDAOLib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/debug/ -lDAOLib
 
 INCLUDEPATH += $$PWD/../DAOLib
 DEPENDPATH += $$PWD/../DAOLib
-
-DISTFILES += \
-   Readme.md

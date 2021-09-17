@@ -14,14 +14,13 @@ ContactDialog::ContactDialog(qint64 key, QWidget *parent) :
    dlgCID = key;
 
    init();
-}
 
+}
 
 ContactDialog::~ContactDialog()
 {
    delete ui;
 }
-
 
 void ContactDialog::init()
 {
@@ -32,8 +31,8 @@ void ContactDialog::init()
 
    showGroupList();
    //selectGroupsToContact(dlgCID);
-}
 
+}
 
 void ContactDialog::readEntry(qint64 key)
 {
@@ -59,8 +58,8 @@ void ContactDialog::readEntry(qint64 key)
    isModified = false;
 
    delete answerDB;
-}
 
+}
 
 bool ContactDialog::saveEntry()
 {
@@ -77,8 +76,8 @@ bool ContactDialog::saveEntry()
    isModified = !retValue;
 
    return retValue;
-}
 
+}
 
 void ContactDialog::showGroupList()
 {
@@ -87,7 +86,8 @@ void ContactDialog::showGroupList()
    QSqlQuery query (SQL, DAOLib::getDatabaseConnection());
 
    while (query.next()) {
-      QListWidgetItem *item = new QListWidgetItem();
+
+      QListWidgetItem* item = new QListWidgetItem();
 
       item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 
@@ -100,28 +100,32 @@ void ContactDialog::showGroupList()
       item->setData(1, query.value("GID").toInt());
 
       ui->listGroups->addItem(item);
-   }
-}
 
+   }
+
+}
 
 void ContactDialog::on_listGroups_itemClicked(QListWidgetItem *)
 {
    for (int i = 0; i < ui->listGroups->count(); i++)
    {
+
        if (ui->listGroups->item(i)->checkState() == Qt::Checked)
        {
           if (!AddressBookDAO::checkContactInGroup(dlgCID, ui->listGroups->item(i)->data(1).toInt()))
              AddressBookDAO::insertContactToGroup(dlgCID, ui->listGroups->item(i)->data(1).toInt());
        }
-             //qDebug() << "numery w if: " + QString::number(ui->listGroups->item(i)->data(1).toInt());
+
+       //qDebug() << "numery w if: " + QString::number(ui->listGroups->item(i)->data(1).toInt());
        if (ui->listGroups->item(i)->checkState() == Qt::Unchecked)
        {
           if (AddressBookDAO::checkContactInGroup(dlgCID, ui->listGroups->item(i)->data(1).toInt()))
              AddressBookDAO::deleteContactFromGroup(dlgCID, ui->listGroups->item(i)->data(1).toInt());
        }
-   }
-}
 
+   }
+
+}
 
 bool ContactDialog::updateEntry(qint64 key)
 {
@@ -135,6 +139,7 @@ bool ContactDialog::updateEntry(qint64 key)
       BdayString = "";
 
    int dayOfYear = Bday.dayOfYear();
+
    QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
    query->prepare("INSERT INTO ContactsBirthdays (CID, BDAYOFYEAR) VALUES (?, ?)");
    query->addBindValue(key);
@@ -151,9 +156,10 @@ bool ContactDialog::updateEntry(qint64 key)
       dlgCID = AddressBookDAO::getLastIdentity();
       retValue = true;
    }
-   return retValue;
-}
 
+   return retValue;
+
+}
 
 bool ContactDialog::insertEntry()
 {
@@ -173,28 +179,32 @@ bool ContactDialog::insertEntry()
                                      BdayString))
    {
       dlgCID = AddressBookDAO::getLastIdentity();
+
+      // Wstawiania kontakt domyslnie do grupy pierwszej
       QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
       query->prepare("INSERT INTO ContactGroup (CID, GID) VALUES (?, 1)");
       query->addBindValue(dlgCID);
       query->exec();
       delete query;
+
       retValue = true;
    }
 
    return retValue;
-}
 
+}
 
 QDate ContactDialog::dateFromString(QString cBday)
 {
    int bDayY, bDayM, bDayD;
+
    bDayY = cBday.sliced(0, 4).toInt();
    bDayM = cBday.sliced(5, 2).toInt();
    bDayD = cBday.sliced(8, 2).toInt();
 
    return QDate(bDayY, bDayM, bDayD);
-}
 
+}
 
 QString ContactDialog::dateToString(QDate cBday)
 {
@@ -203,8 +213,8 @@ QString ContactDialog::dateToString(QDate cBday)
    retVal += QString::number(cBday.day());
 
    return retVal;
-}
 
+}
 
 void ContactDialog::on_btnSave_clicked()
 {
@@ -213,71 +223,72 @@ void ContactDialog::on_btnSave_clicked()
       if (!saveEntry())
          return;
    }
-   close();
-}
 
+   close();
+
+}
 
 void ContactDialog::on_btnCancel_clicked()
 {
    close();
-}
 
+}
 
 void ContactDialog::on_textName_textChanged(const QString &)
 {
     ui->btnSave->setEnabled(true);
     isModified = true;
-}
 
+}
 
 void ContactDialog::on_textSurname_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textPhone1_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textPhone2_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textEmail_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textPLZ_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textCity_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_textStreet_textChanged(const QString &)
 {
    ui->btnSave->setEnabled(true);
    isModified = true;
-}
 
+}
 
 void ContactDialog::on_calendarWidget_selectionChanged()
 {
@@ -294,9 +305,8 @@ void ContactDialog::on_checkBirthday_toggled(bool checked)
       setBirthday = true;
       isModified = true;
    }
+
 }
-
-
 
 
 

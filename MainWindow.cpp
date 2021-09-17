@@ -8,681 +8,688 @@
 #include "DateStyledItemDelegate.h"
 
 MainWindow::MainWindow(QWidget *parent)
-   : QMainWindow(parent)
-   , ui(new Ui::MainWindow)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
 {
-   ui->setupUi(this);
+    ui->setupUi(this);
 
-   init();
+    init();
 }
 
 MainWindow::~MainWindow()
 {
-   delete ui;
+    delete ui;
 }
 
 void MainWindow::init()
 {
-   gWindow = nullptr;
-   bWindow = nullptr;
-   importIsRunning = false;
+    gWindow = nullptr;
+    bWindow = nullptr;
+    importIsRunning = false;
 
-   statusLabel = new QLabel(this);
-   statusLabel->setIndent(5);
-   statusBar()->addWidget(statusLabel, 1);
+    statusLabel = new QLabel(this);
+    statusLabel->setIndent(5);
+    statusBar()->addWidget(statusLabel, 1);
 
-   progressBar = new QProgressBar(this);
-   QString styleSheet = "QProgressBar{border: 2px solid grey; border-radius: 5px; text-align: center;}";
-   styleSheet += "QProgressBar::chunk{background-color: lightgreen;margin: 1px;}";
-   progressBar->setStyleSheet(styleSheet);
-   progressBar->setFixedWidth(200);
-   progressBar->setVisible(false);
+    progressBar = new QProgressBar(this);
+    QString styleSheet = "QProgressBar{border: 2px solid grey; border-radius: 5px; text-align: center;}";
+    styleSheet += "QProgressBar::chunk{background-color: lightgreen;margin: 1px;}";
+    progressBar->setStyleSheet(styleSheet);
+    progressBar->setFixedWidth(200);
+    progressBar->setVisible(false);
 
-   statusBar()->addPermanentWidget(progressBar);
+    statusBar()->addPermanentWidget(progressBar);
 
-   enableDatabase(openDatabase("ZENBOOK\\SQLEXPRESS", "AddressBook"));
-   QString gName = "#Default";
+    enableDatabase(openDatabase("ZENBOOK\\SQLEXPRESS", "AddressBook"));
+    QString gName = "#Default";
 
-   if (AddressBookDAO::getGroupsCount() == 0)
-      AddressBookDAO::insertGroup(gName);
+    if (AddressBookDAO::getGroupsCount() == 0)
+        AddressBookDAO::insertGroup(gName);
 
-   ui->tableView->installEventFilter(this);
+    ui->tableView->installEventFilter(this);
 
-   showTable();
+    showTable();
 
-   showBoxGroupList();
-   setTableViewModel();
+    showBoxGroupList();
+    setTableViewModel();
 
 }
-
 
 void MainWindow::enableDatabase(bool bEnable)
 {
-   if (bEnable)
-      statusLabel->setText(tr("Database: ") + DAOLib::getDatabaseName());
-   else
-      statusLabel->setText(tr("Database: (none)"));
-}
+    if (bEnable)
+        statusLabel->setText(tr("Database: ") + DAOLib::getDatabaseName());
+    else
+        statusLabel->setText(tr("Database: (none)"));
 
+}
 
 bool MainWindow::openDatabase(const QString &server, const QString &database)
 {
-   QString driver = "QODBC";
-   QString driverName = "DRIVER={SQL Server}";
+    QString driver = "QODBC";
+    QString driverName = "DRIVER={SQL Server}";
 
-   return DAOLib::connectToDatabase(driver, driverName, server, database);
+    return DAOLib::connectToDatabase(driver, driverName, server, database);
+
 }
-
 
 void MainWindow::openVcfFile()
 {
-   QString actDir;
-   QString defaultFilter = tr("File VCF-contacts (*.vcf)");
+    QString actDir;
+    QString defaultFilter = tr("File VCF-contacts (*.vcf)");
 
-   actDir = QDir::homePath();
+    actDir = QDir::homePath();
 
-   QString filename = QFileDialog::getOpenFileName(this, tr("File VCF-Contacts"), actDir,
-                                                   tr("All files (*.*);;") + defaultFilter, &defaultFilter);
-   if (!filename.isEmpty())
-      readVcfFile(filename);
+    QString filename = QFileDialog::getOpenFileName(this, tr("File VCF-Contacts"), actDir,
+                                                    tr("All files (*.*);;") + defaultFilter, &defaultFilter);
+    if (!filename.isEmpty())
+        readVcfFile(filename);
+
 }
-
 
 void MainWindow::readVcfFile(const QString &fileName)
 {
-   QString cName, cSurname, cTelCell, cTelHome, cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday;
-   QString line, statusText;
-   int recordCounter = 0, insertCounter = 0, lineCounter = 0, msgValue, progressValue = 0;
+    QString cName, cSurname, cTelCell, cTelHome, cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday;
+    QString line, statusText;
+    int recordCounter = 0, insertCounter = 0, lineCounter = 0, msgValue, progressValue = 0;
 
-   importIsRunning = true;
-   stopImport = false;
+    importIsRunning = true;
+    stopImport = false;
 
-   qint64 fileSize = getFileSize(fileName);
+    qint64 fileSize = getFileSize(fileName);
 
-   progressBar->setRange(0, 100);
-   progressBar->setValue(0);
-   progressBar->setVisible(true);
+    progressBar->setRange(0, 100);
+    progressBar->setValue(0);
+    progressBar->setVisible(true);
 
-   QFile file(fileName);
+    QFile file(fileName);
 
-   if (!file.open(QFile::ReadOnly | QFile::Text))
-   {
-      QMessageBox::critical(this, tr("File open"),
-                            QString(tr("File %1 can not be open. \n%2"))
-                            .arg(fileName.arg(file.errorString())));
-      return;
-   }
-   else
-   {
-      statusLabel->setText(fileName);
+    if (!file.open(QFile::ReadOnly | QFile::Text))
+    {
+        QMessageBox::critical(this, tr("File open"),
+                              QString(tr("File %1 can not be open. \n%2"))
+                              .arg(fileName.arg(file.errorString())));
+        return;
+    }
+    else
+    {
+        statusLabel->setText(fileName);
 
-      QTextStream in(&file);
+        QTextStream in(&file);
 
-      while (!in.atEnd())
-      {
-         if (stopImport)
-         {
-            msgValue = QMessageBox::question(this, tr("Import contacts"),
-                                             tr("Cancel the current process?"),
-                                             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-            if (msgValue == QMessageBox::Yes)
-               break;
-
-            stopImport = false;
-         }
-
-         line = in.readLine();
-         lineCounter++;
-
-         progressValue += line.length() + 2;
-
-         progressBar->setValue(static_cast<int>((progressValue * 100) / fileSize));
-         QApplication::processEvents();
-
-
-         if (line.size() >= 11 && line.sliced(0, 11) == QString("BEGIN:VCARD"))
-         {
-            recordCounter++;
-         }
-         else if ((line.size() >= 2) && (line.sliced(0,2) == QString("N:")))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            QString splitName = splitList[1];
-
-            QStringList splitNameList = splitName.split(QLatin1Char(';'));
-            cSurname = splitNameList[0];
-            cName = splitNameList[1];
-
-         }
-         else if (line.size() >= 6 && line.sliced(0, 6) == QString("EMAIL;"))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            cEmail = splitList[1];
-
-         }
-         else if (line.size() >= 14 && line.sliced(0, 14) == QString("TEL;TYPE=CELL:"))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            cTelCell = splitList[1];
-
-         }
-         else if (line.size() >= 14 && line.sliced(0, 14) == QString("TEL;TYPE=HOME:"))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            cTelHome = splitList[1];
-
-         }
-         else if (line.size() >= 5 && line.sliced(0, 5) == QString("BDAY:"))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            cBday = splitList[1];
-            cBday.insert(6, "-");
-            cBday.insert(4, "-");
-         }
-         else if (line.size() >= 14 && line.sliced(0, 14) == QString("ADR;TYPE=HOME:"))
-         {
-            QStringList splitList = line.split(QLatin1Char(':'));
-            QString splitAddress = splitList[1];
-
-            QStringList splitAddressList = splitAddress.split(QLatin1Char(';'));
-            if (splitAddressList.size() > 7)
+        while (!in.atEnd())
+        {
+            if (stopImport)
             {
-               cAdrCity = splitAddressList[3];
-               cAdrPLZ = splitAddressList[5];
-               QString splitStr = splitAddressList[7];
+                msgValue = QMessageBox::question(this, tr("Import contacts"),
+                                                 tr("Cancel the current process?"),
+                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+                if (msgValue == QMessageBox::Yes)
+                    break;
 
-               QStringList splitAddStr = splitStr.split(QLatin1Char('\\n'));
-
-               cAdrStr = splitAddStr[0];
+                stopImport = false;
             }
-         }
 
-         if (line.size() >= 9 && line.sliced(0, 9) == QString("END:VCARD"))
-         {
-            if (AddressBookDAO::contactExists(cName, cSurname, cTelCell, cTelHome,
-                                              cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday))
-               continue;
+            line = in.readLine();
+            lineCounter++;
 
-            if (AddressBookDAO::insertContact(cName, cSurname, cTelCell, cTelHome,
-                                              cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday))
+            progressValue += line.length() + 2;
+
+            progressBar->setValue(static_cast<int>((progressValue * 100) / fileSize));
+            QApplication::processEvents();
+
+            if (line.size() >= 11 && line.sliced(0, 11) == QString("BEGIN:VCARD"))
             {
-               insertCounter++;
-               qint64 key = AddressBookDAO::getLastIdentity();
-               if (cBday.length() != 0)
-               {
-                  int dayOfYear = dateFromString(cBday).dayOfYear();
-                  QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
-                  query->prepare("INSERT INTO ContactsBirthdays (CID, BDAYOFYEAR) VALUES (?, ?)");
-                  query->addBindValue(key);
-                  query->addBindValue(dayOfYear);
-                  query->exec();
-                  delete query;
-               }
-               QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
-               query->prepare("INSERT INTO ContactGroup (CID, GID) VALUES (?, 1)");
-               query->addBindValue(key);
-               query->exec();
-               delete query;
+                recordCounter++;
+            }
+            else if ((line.size() >= 2) && (line.sliced(0,2) == QString("N:")))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                QString splitName = splitList[1];
+
+                QStringList splitNameList = splitName.split(QLatin1Char(';'));
+                cSurname = splitNameList[0];
+                cName = splitNameList[1];
+
+            }
+            else if (line.size() >= 6 && line.sliced(0, 6) == QString("EMAIL;"))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                cEmail = splitList[1];
+
+            }
+            else if (line.size() >= 14 && line.sliced(0, 14) == QString("TEL;TYPE=CELL:"))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                cTelCell = splitList[1];
+
+            }
+            else if (line.size() >= 14 && line.sliced(0, 14) == QString("TEL;TYPE=HOME:"))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                cTelHome = splitList[1];
+
+            }
+            else if (line.size() >= 5 && line.sliced(0, 5) == QString("BDAY:"))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                cBday = splitList[1];
+                cBday.insert(6, "-");
+                cBday.insert(4, "-");
+
+            }
+            else if (line.size() >= 14 && line.sliced(0, 14) == QString("ADR;TYPE=HOME:"))
+            {
+                QStringList splitList = line.split(QLatin1Char(':'));
+                QString splitAddress = splitList[1];
+
+                QStringList splitAddressList = splitAddress.split(QLatin1Char(';'));
+                if (splitAddressList.size() > 7)
+                {
+                    cAdrCity = splitAddressList[3];
+                    cAdrPLZ = splitAddressList[5];
+                    QString splitStr = splitAddressList[7];
+
+                    QStringList splitAddStr = splitStr.split(QLatin1Char('\n'));
+
+                    cAdrStr = splitAddStr[0];
+
+                }
 
             }
 
-            resetValue(cName);
-            resetValue(cSurname);
-            resetValue(cTelCell);
-            resetValue(cTelHome);
-            resetValue(cEmail);
-            resetValue(cAdrPLZ);
-            resetValue(cAdrCity);
-            resetValue(cAdrStr);
-            resetValue(cBday);
-         }
-      }
-   }
+            if (line.size() >= 9 && line.sliced(0, 9) == QString("END:VCARD"))
+            {
+                if (AddressBookDAO::contactExists(cName, cSurname, cTelCell, cTelHome,
+                                                  cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday))
+                    continue;
 
-   file.close();
+                if (AddressBookDAO::insertContact(cName, cSurname, cTelCell, cTelHome,
+                                                  cEmail, cAdrPLZ, cAdrCity, cAdrStr, cBday))
+                {
+                    insertCounter++;
+                    qint64 key = AddressBookDAO::getLastIdentity();
 
-   progressBar->setVisible(false);
-   statusLabel->setText(statusText);
+                    if (cBday.length() != 0)
+                    {
+                        int dayOfYear = dateFromString(cBday).dayOfYear();
 
-   if (stopImport)
-   {
-      QMessageBox::information(this, tr("Import contacts"),
-                               tr("The import of the data records was canceled by the user"));
-   }
-   else
-   {
-      QMessageBox::information(this, tr("Import contacts"),
-                               QString(tr("%L1 records were read.\n%L2 records were imported successfully"))
-                               .arg(recordCounter).arg(insertCounter));
-   }
+                        if (AddressBookDAO::insertContactToBirthdayTable(key, dayOfYear))
+                            continue;
 
-   importIsRunning = false;
+                        //                        QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
+                        //                        query->prepare("INSERT INTO ContactsBirthdays (CID, BDAYOFYEAR) VALUES (?, ?)");
+                        //                        query->addBindValue(key);
+                        //                        query->addBindValue(dayOfYear);
+                        //                        query->exec();
+                        //                        delete query;
 
-   setTableViewModel();
-   updateLabel();
+                    }
+
+                    if (AddressBookDAO::insertContactToGroup(key, 1))
+                        continue;
+
+                    //                    QSqlQuery* query = new QSqlQuery(DAOLib::getDatabaseConnection());
+                    //                    query->prepare("INSERT INTO ContactGroup (CID, GID) VALUES (?, 1)");
+                    //                    query->addBindValue(key);
+                    //                    query->exec();
+                    //                    delete query;
+
+                }
+
+                resetValue(cName);
+                resetValue(cSurname);
+                resetValue(cTelCell);
+                resetValue(cTelHome);
+                resetValue(cEmail);
+                resetValue(cAdrPLZ);
+                resetValue(cAdrCity);
+                resetValue(cAdrStr);
+                resetValue(cBday);
+
+            }
+        }
+    }
+
+    file.close();
+
+    progressBar->setVisible(false);
+    statusLabel->setText(statusText);
+
+    if (stopImport)
+    {
+        QMessageBox::information(this, tr("Import contacts"),
+                                 tr("The import of the data records was canceled by the user"));
+
+    }
+    else
+    {
+        QMessageBox::information(this, tr("Import contacts"),
+                                 QString(tr("%L1 records were read.\n%L2 records were imported successfully"))
+                                 .arg(recordCounter).arg(insertCounter));
+
+    }
+
+    importIsRunning = false;
+
+    setTableViewModel();
+    updateLabel();
+
 }
-
 
 QDate MainWindow::dateFromString(QString cBday)
 {
-   int bDayY, bDayM, bDayD;
-   bDayY = cBday.sliced(0, 4).toInt();
-   bDayM = cBday.sliced(5, 2).toInt();
-   bDayD = cBday.sliced(8, 2).toInt();
+    int bDayY, bDayM, bDayD;
 
-   return QDate(bDayY, bDayM, bDayD);
+    bDayY = cBday.sliced(0, 4).toInt();
+    bDayM = cBday.sliced(5, 2).toInt();
+    bDayD = cBday.sliced(8, 2).toInt();
+
+    return QDate(bDayY, bDayM, bDayD);
+
 }
-
 
 qint64 MainWindow::getFileSize(const QString &fileName)
 {
-   qint64 retValue = 0;
+    qint64 retValue = 0;
 
-   QFile file(fileName);
-   if (file.open(QFile::ReadOnly))
-   {
-      retValue = file.size();
-      file.close();
-   }
-   return retValue;
+    QFile file(fileName);
+    if (file.open(QFile::ReadOnly))
+    {
+        retValue = file.size();
+        file.close();
+    }
+
+    return retValue;
+
 }
-
 
 QString MainWindow::resetValue(QString &value)
 {
-   return (value = "");
-}
+    return (value = "");
 
+}
 
 QSqlTableModel *MainWindow::setTableViewModel()
 {
-   delete ui->tableView->model();
+    delete ui->tableView->model();
 
-   QSqlTableModel* model = AddressBookDAO::readContactsIntoTableModel();
+    QSqlTableModel* model = AddressBookDAO::readContactsIntoTableModel();
 
-   model->sort(model->record().indexOf("CSURNAME"), Qt::SortOrder::AscendingOrder);
+    model->sort(model->record().indexOf("CSURNAME"), Qt::SortOrder::AscendingOrder);
 
-   model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
-   model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
-   model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
-   model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
-   model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
-   model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
-   model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
-   model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
-   model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
+    model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
+    model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
+    model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
+    model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
+    model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
+    model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
+    model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
+    model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
+    model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
 
-   //DateStyledItemDelegate* delegate = new DateStyledItemDelegate(this, "dd.MM.yyyy");
-   //ui->tableView->setItemDelegateForColumn(model->record().indexOf("CBIRTHDAY"), delegate);
+    //DateStyledItemDelegate* delegate = new DateStyledItemDelegate(this, "dd.MM.yyyy");
+    //ui->tableView->setItemDelegateForColumn(model->record().indexOf("CBIRTHDAY"), delegate);
 
-   ui->tableView->setModel(model);
+    ui->tableView->setModel(model);
 
-   updateLabel();
+    updateLabel();
 
-   return model;
+    return model;
+
 }
-
 
 void MainWindow::showTable()
 {
-   QSqlTableModel* model = setTableViewModel();
+    QSqlTableModel* model = setTableViewModel();
 
-   ui->tableView->setStyleSheet("QHeaderView::section {background-color: lightgrey;}");
+    ui->tableView->setStyleSheet("QHeaderView::section {background-color: lightgrey;}");
 
-   ui->tableView->horizontalHeader()->setStyleSheet("color: Black;");
-   ui->tableView->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
-   ui->tableView->horizontalHeader()->setStretchLastSection(true);
+    ui->tableView->horizontalHeader()->setStyleSheet("color: Black;");
+    ui->tableView->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
+    ui->tableView->horizontalHeader()->setStretchLastSection(true);
 
-   ui->tableView->hideColumn(model->record().indexOf("CID"));
+    ui->tableView->hideColumn(model->record().indexOf("CID"));
 
-   if (model->rowCount() > 0)
-      ui->tableView->selectRow(0);
+    if (model->rowCount() > 0)
+        ui->tableView->selectRow(0);
+
 }
-
 
 void MainWindow::showContactDialog(const qint64 key)
 {
-   ContactDialog cDialog(key, this);
+    ContactDialog cDialog(key, this);
 
-   connect(&cDialog, SIGNAL(refreshData(const qint64)),
-           this, SLOT(updateTableView(const qint64)));
+    connect(&cDialog, SIGNAL(refreshData(const qint64)), this, SLOT(updateTableView(const qint64)));
 
-   cDialog.exec();
+    cDialog.exec();
+
 }
-
 
 void MainWindow::findItemInTableView(const QString &columnName, const QVariant &value)
 {
-   bool found = false;
+    bool found = false;
 
-   QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
+    QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
 
-   QSqlQuery query = model->query();
+    QSqlQuery query = model->query();
 
-   int colIndex = model->record().indexOf(columnName);
+    int colIndex = model->record().indexOf(columnName);
 
-   if (colIndex < 0)
-      return;
+    if (colIndex < 0)
+        return;
 
-   query.first();
+    query.first();
 
-   int row = query.at();
+    int row = query.at();
 
-   do
-   {
-      if (query.value(colIndex).toString().contains(value.toString(), Qt::CaseInsensitive))
-      {
-         found = true;
-         break;
-      }
+    do
+    {
+        if (query.value(colIndex).toString().contains(value.toString(), Qt::CaseInsensitive))
+        {
+            found = true;
+            break;
+        }
 
-      row++;
+        row++;
 
-   } while (query.next());
+    } while (query.next());
 
-   if (found)
-      ui->tableView->selectRow(row);
-   else
-      ui->tableView->selectRow(0);
+
+    if (found)
+        ui->tableView->selectRow(row);
+    else
+        ui->tableView->selectRow(0);
+
 }
-
 
 void MainWindow::showBoxGroupList()
 {
-   QSqlQueryModel *query = new QSqlQueryModel;
+    QSqlQueryModel *query = new QSqlQueryModel;
 
-   QString SQL = "SELECT GNAME, GID FROM Groups ORDER BY GNAME";
+    QString SQL = "SELECT GNAME, GID FROM Groups ORDER BY GNAME";
 
-   query->setQuery(SQL, DAOLib::getDatabaseConnection());
+    query->setQuery(SQL, DAOLib::getDatabaseConnection());
 
-   ui->boxGroup->setModel(query);
+    ui->boxGroup->setModel(query);
 
-   ui->boxGroup->show();
+    ui->boxGroup->show();
+
 }
-
 
 void MainWindow::deleteEntry(const QModelIndex index)
 {
-   QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
 
-   qint64 key = model->record(index.row()).value("CID").toLongLong();
+    QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
 
-   QString name = model->record(index.row()).value("CNAME").toString();
-   QString surname = model->record(index.row()).value("CSURNAME").toString();
+    qint64 key = model->record(index.row()).value("CID").toLongLong();
 
-   int msgValue = QMessageBox::question(this, this->windowTitle(),
-                                        tr("Do you want to remove entry\n") + name + " " + surname,
-                                        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    QString name = model->record(index.row()).value("CNAME").toString();
+    QString surname = model->record(index.row()).value("CSURNAME").toString();
 
-   if (msgValue == QMessageBox::No)
-      return;
+    int msgValue = QMessageBox::question(this, this->windowTitle(),
+                                         tr("Do you want to remove entry\n") + name + " " + surname,
+                                         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
 
-   if (!AddressBookDAO::deleteContact(key))
-      return;
+    if (msgValue == QMessageBox::No)
+        return;
 
-   AddressBookDAO::deleteContactFromAllGroups(key);
+    if (!AddressBookDAO::deleteContact(key))
+        return;
 
-   setTableViewModel();
-   updateLabel();
+    AddressBookDAO::deleteContactFromAllGroups(key);
 
-   int row = (index.row() - 1 < 0) ? 0 : index.row() - 1;
+    setTableViewModel();
+    updateLabel();
 
-   if (ui->tableView->model()->rowCount() > 0)
-      ui->tableView->selectRow(row);
+    int row = (index.row() - 1 < 0) ? 0 : index.row() - 1;
+
+    if (ui->tableView->model()->rowCount() > 0)
+        ui->tableView->selectRow(row);
+
 }
-
 
 QSqlTableModel *MainWindow::searchContacts(QString searchVal)
 {
-   delete ui->tableView->model();
+    delete ui->tableView->model();
 
-   QSqlTableModel* model = AddressBookDAO::searchContacts(searchVal);
+    QSqlTableModel* model = AddressBookDAO::searchContacts(searchVal);
 
-   model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
-   model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
-   model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
-   model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
-   model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
-   model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
-   model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
-   model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
-   model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
+    model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
+    model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
+    model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
+    model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
+    model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
+    model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
+    model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
+    model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
+    model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
 
-   ui->tableView->setModel(model);
+    ui->tableView->setModel(model);
 
-   while(model->canFetchMore())
-      model->fetchMore();
+    while(model->canFetchMore())
+        model->fetchMore();
 
-   updateLabel();
-   ui->textSearch->selectAll();
+    updateLabel();
+    ui->textSearch->selectAll();
 
-   return model;
+    return model;
+
 }
-
 
 void MainWindow::searchByGroup(int gid)
 {
-   delete ui->tableView->model();
+    delete ui->tableView->model();
 
-   QSqlQueryModel* model = AddressBookDAO::readContactsFromSelectedGroup(gid);
+    QSqlQueryModel* model = AddressBookDAO::readContactsFromSelectedGroup(gid);
 
-   model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
-   model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
-   model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
-   model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
-   model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
-   model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
-   model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
-   model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
-   model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
+    model->setHeaderData(model->record().indexOf("CNAME"), Qt::Horizontal, "Name");
+    model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
+    model->setHeaderData(model->record().indexOf("CTELEPHONECELL"), Qt::Horizontal, "Number Cell");
+    model->setHeaderData(model->record().indexOf("CTELEPHONEHOME"), Qt::Horizontal, "Number Home");
+    model->setHeaderData(model->record().indexOf("CEMAIL"), Qt::Horizontal, "Email");
+    model->setHeaderData(model->record().indexOf("CADDRESSPLZ"), Qt::Horizontal, "PLZ");
+    model->setHeaderData(model->record().indexOf("CADDRESSCITY"), Qt::Horizontal, "City");
+    model->setHeaderData(model->record().indexOf("CADDRESSSTREET"), Qt::Horizontal, "Street");
+    model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
 
-   ui->tableView->setModel(model);
-   ui->tableView->setStyleSheet("QHeaderView::section {background-color: lightgrey;}");
-   ui->tableView->hideColumn(model->record().indexOf("CID"));
+    ui->tableView->setModel(model);
+    ui->tableView->setStyleSheet("QHeaderView::section {background-color: lightgrey;}");
+    ui->tableView->hideColumn(model->record().indexOf("CID"));
 
-   ui->tableView->horizontalHeader()->setStyleSheet("color: Black;");
-   ui->tableView->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
-   ui->tableView->horizontalHeader()->setStretchLastSection(true);
+    ui->tableView->horizontalHeader()->setStyleSheet("color: Black;");
+    ui->tableView->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
+    ui->tableView->horizontalHeader()->setStretchLastSection(true);
 
-   while(model->canFetchMore())
-      model->fetchMore();
+    while(model->canFetchMore())
+        model->fetchMore();
 
-   ui->textSearch->setText("");
+    ui->textSearch->setText("");
 
-   statusLabel->setText(tr("Refreshing..."));
-   QApplication::processEvents();
+    statusLabel->setText(tr("Refreshing..."));
 
-   QString msg = QString("Total count: %1").arg(AddressBookDAO::getContactsInGroupCount(gid));
-   statusLabel->setText(msg);
+    QApplication::processEvents();
+
+    QString msg = QString(tr("Total count: %1")).arg(AddressBookDAO::getContactsInGroupCount(gid));
+    statusLabel->setText(msg);
 
 }
 
 
 bool MainWindow::eventFilter(QObject *sender, QEvent *event)
 {
-   if (sender == ui->tableView)
-   {
-      if (event->type() == QEvent::KeyPress)
-      {
-         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+    if (sender == ui->tableView)
+    {
+        if (event->type() == QEvent::KeyPress)
+        {
 
-         // klawisz Home ustawia z powrotem na pozycje 1
-         if (keyEvent->key() == Qt::Key_Home)
-         {
-            ui->tableView->scrollToTop();
-            ui->tableView->selectRow(0);
-         }
-         else if (keyEvent->key() == Qt::Key_End)
-         {
-            ui->tableView->scrollToBottom();
-            ui->tableView->selectRow(ui->tableView->model()->rowCount() - 1);
-         }
-         else if (keyEvent->key() == Qt::Key_Return)
-         {
-            on_tableView_doubleClicked(ui->tableView->currentIndex());
-         }
-         else if (keyEvent->key() == Qt::Key_Delete)
-         {
-            deleteEntry(ui->tableView->currentIndex());
-         }
-      }
-   }
-   return QObject::eventFilter(sender, event);
+            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+
+            // klawisz Home ustawia z powrotem na pozycje 1
+            if (keyEvent->key() == Qt::Key_Home)
+            {
+                ui->tableView->scrollToTop();
+                ui->tableView->selectRow(0);
+            }
+            else if (keyEvent->key() == Qt::Key_End)
+            {
+                ui->tableView->scrollToBottom();
+                ui->tableView->selectRow(ui->tableView->model()->rowCount() - 1);
+            }
+            else if (keyEvent->key() == Qt::Key_Return)
+            {
+                on_tableView_doubleClicked(ui->tableView->currentIndex());
+            }
+            else if (keyEvent->key() == Qt::Key_Delete)
+            {
+                deleteEntry(ui->tableView->currentIndex());
+            }
+        }
+    }
+
+    return QObject::eventFilter(sender, event);
+
 }
-
 
 void MainWindow::updateLabel()
 {
-   statusLabel->setText(tr("Refreshing..."));
-   QApplication::processEvents();
+    statusLabel->setText(tr("Refreshing..."));
+    QApplication::processEvents();
 
-   QString msg = QString("Total count: %1").arg(AddressBookDAO::getContactsCount());
-   statusLabel->setText(msg);
+    QString msg = QString(tr("Total count: %1")).arg(AddressBookDAO::getContactsCount());
+    statusLabel->setText(msg);
+
 }
-
 
 void MainWindow::on_actionGroupsEdit_triggered()
 {
-   delete gWindow;
+    delete gWindow;
 
-   gWindow = new GroupsWindow(this);
+    gWindow = new GroupsWindow(this);
 
-   connect(gWindow, SIGNAL(windowClosed(const QWidget*)),
-           this, SLOT(onWindowClosed(const QWidget*)));
+    connect(gWindow, SIGNAL(windowClosed(const QWidget*)), this, SLOT(onWindowClosed(const QWidget*)));
 
-   gWindow->show();
+    gWindow->show();
+
 }
-
 
 void MainWindow::onWindowClosed(const QWidget * widget)
 {
-   showBoxGroupList();
-   setTableViewModel();
+    showBoxGroupList();
+    setTableViewModel();
 
-   if (widget == gWindow)
-   {
-      delete gWindow;
+    if (widget == gWindow)
+    {
+        delete gWindow;
 
-      gWindow = nullptr;
-   }
+        gWindow = nullptr;
+    }
+
 }
-
 
 void MainWindow::on_tableView_doubleClicked(const QModelIndex &index)
 {
-   QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
+    QSqlTableModel* model = static_cast<QSqlTableModel*>(ui->tableView->model());
 
-   showContactDialog(model->record(index.row()).value("CID").toLongLong());
+    showContactDialog(model->record(index.row()).value("CID").toLongLong());
+
 }
-
 
 void MainWindow::closeEvent(QCloseEvent * event)
 {
-   if (importIsRunning)
-      event->ignore();
-   else
-   {
-      DAOLib::closeConnection();
-      event->accept();
-   }
-}
+    if (importIsRunning)
+        event->ignore();
+    else
+    {
+        DAOLib::closeConnection();
+        event->accept();
+    }
 
+}
 
 void MainWindow::on_actionImportContacts_triggered()
 {
-   openVcfFile();
+    openVcfFile();
 }
-
 
 void MainWindow::on_actionEnd_triggered()
 {
-   close();
+    close();
 }
-
 
 void MainWindow::on_actionNew_triggered()
 {
-   showContactDialog(-1);
-}
+    showContactDialog(-1);
 
+}
 
 void MainWindow::on_actionEdit_triggered()
 {
-   QModelIndex index = ui->tableView->currentIndex();
+    QModelIndex index = ui->tableView->currentIndex();
 
-   on_tableView_doubleClicked(index);
+    on_tableView_doubleClicked(index);
+
 }
-
 
 void MainWindow::on_textSearch_returnPressed()
 {
-   setTableViewModel();
-   // set group list box to delauft group
-   ui->boxGroup->setCurrentIndex(0);
+    setTableViewModel();
+    // set group list box to delauft group
+    ui->boxGroup->setCurrentIndex(0);
 
-   if (ui->textSearch->text() != "")
-      searchContacts(ui->textSearch->text());
-   else
-      setTableViewModel();
+    if (ui->textSearch->text() != "")
+        searchContacts(ui->textSearch->text());
+    else
+        setTableViewModel();
+
 }
-
 
 void MainWindow::updateTableView(const qint64 cid)
 {
-   setTableViewModel();
-   updateLabel();
-   findItemInTableView("CID", QVariant(cid));
-}
+    setTableViewModel();
+    updateLabel();
+    findItemInTableView("CID", QVariant(cid));
 
+}
 
 void MainWindow::on_actionDelete_triggered()
 {
-   deleteEntry(ui->tableView->currentIndex());
-}
+    deleteEntry(ui->tableView->currentIndex());
 
+}
 
 void MainWindow::on_actionBirthdaysTable_triggered()
 {
-   delete bWindow;
+    delete bWindow;
 
-   bWindow = new BirthdayWindow(this);
-   bWindow->show();
+    bWindow = new BirthdayWindow(this);
+    bWindow->show();
+
 }
-
 
 void MainWindow::on_boxGroup_currentIndexChanged(int index)
 {
     searchByGroup(index);
-}
 
+}
 
 void MainWindow::on_boxGroup_activated(int)
 {
-   // Gets selected groups name
-   QString gName = ui->boxGroup->currentText();
+    // Gets selected groups name
+    QString gName = ui->boxGroup->currentText();
 
-   // Gets gid from name
-   int groupID = AddressBookDAO::getGroupID(gName);
+    // Gets gid from name
+    int groupID = AddressBookDAO::getGroupID(gName);
 
-   // call table view filtered by groupid
-   searchByGroup(groupID);
+    // call table view filtered by groupid
+    searchByGroup(groupID);
+
 }
-
 
 void MainWindow::reject()
 {
-   close();
+    close();
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

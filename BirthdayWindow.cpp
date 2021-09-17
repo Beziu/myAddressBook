@@ -24,8 +24,8 @@ void BirthdayWindow::init()
    statusBar()->addWidget(statusLabel, 1);
 
    showTable();
-}
 
+}
 
 QSqlQueryModel *BirthdayWindow::setQueryModel()
 {
@@ -47,8 +47,8 @@ QSqlQueryModel *BirthdayWindow::setQueryModel()
    updateLabel();
 
    return model;
-}
 
+}
 
 void BirthdayWindow::showTable()
 {
@@ -58,6 +58,7 @@ void BirthdayWindow::showTable()
    ui->tableView->hideColumn(model->record().indexOf("BDAYOFYEAR"));
    ui->tableView->horizontalHeader()->setStretchLastSection(true);
    ui->tableView->show();
+
 }
 
 void BirthdayWindow::updateLabel()

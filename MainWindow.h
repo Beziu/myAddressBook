@@ -12,6 +12,10 @@
 #include <QLibraryInfo>
 #include <QDialog>
 #include <QSqlQuery>
+#include <QTranslator>
+#include <QActionGroup>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
 
 #include "GroupsWindow.h"
 #include "ContactDialog.h"
@@ -64,6 +68,17 @@ private:
    GroupsWindow* gWindow;
    BirthdayWindow* bWindow;
    QSqlQuery* query;
+   QTranslator* sysTranslator;
+   QTranslator* plTranslator;
+   QTranslator* deTranslator;
+
+   QString actFile;
+   QString xmlConfigFile;
+   QString currentLanguage;
+
+   bool bSysTranslatorLoaded;
+   bool bPlTranslatorLoaded;
+   bool bDeTranslatorLoaded;
 
    bool importIsRunning;
    bool stopImport;
@@ -73,8 +88,12 @@ private:
    bool openDatabase(const QString& server, const QString& database);
    void closeEvent(QCloseEvent* event) override;
 
+   void readXmlSettings(const QString& file);
+   void writeXmlSettings(const QString& file);
    void openVcfFile();
    void readVcfFile(const QString &filename);
+   void exportContactToXml(const QString& filename);
+   bool questionSaveFile();
    qint64 getFileSize(const QString& fileName);
    QString resetValue(QString &value);
    QDate dateFromString(QString cBday);
@@ -86,6 +105,8 @@ private:
    void showBoxGroupList();
 
    void deleteEntry(const QModelIndex index);
+   void loadLanguage(const QString& lang);
+   void removeAllTranslators();
 
    bool eventFilter(QObject* sender, QEvent* event) override;
    void updateLabel();

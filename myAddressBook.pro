@@ -34,8 +34,9 @@ FORMS += \
     GroupsWindow.ui \
     MainWindow.ui
 
-TRANSLATIONS = \
-    AddressBook_en.ts
+TRANSLATIONS += \
+    myAddressBook_en.ts \
+    myAddressBook_pl.ts
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -43,7 +44,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 DISTFILES += \
-   Readme.md
+   Readme.md \
+   myAddressBook_en.ts
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/release/ -lDAOLib
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/debug/ -lDAOLib

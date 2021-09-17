@@ -11,6 +11,13 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
+    //    enTranslator = new QTranslator();
+    //    bEnTranslatorLoaded = enTranslator->load("myAddressBook_en",
+    //                                               QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+
+    //    if (bEnTranslatorLoaded)
+    //        qApp->installTranslator(enTranslator);
+
     ui->setupUi(this);
 
     init();
@@ -23,6 +30,31 @@ MainWindow::~MainWindow()
 
 void MainWindow::init()
 {
+
+    // Pozycje menu dla języka można sprawdzić.
+    // Aby można było wybrać tylko jeden wpis naraz,
+    // należy je połączyć w ActionGroup.
+    QActionGroup* actionGroupLanguage = new QActionGroup(this);
+    actionGroupLanguage->addAction(ui->actionEnglisch);
+    actionGroupLanguage->addAction(ui->actionPolisch);
+    actionGroupLanguage->addAction(ui->actionDeutsch);
+
+    sysTranslator = new QTranslator();
+    bSysTranslatorLoaded = sysTranslator->load(QLocale::English,
+                                               QDir::currentPath() + QDir::separator() + "myAddressBook", "_");
+    bSysTranslatorLoaded = false;
+
+    plTranslator = new QTranslator();
+    bPlTranslatorLoaded = plTranslator->load(QLocale::Polish,
+                                             QDir::currentPath() + QDir::separator() + "myAddressBook", "_");
+    bPlTranslatorLoaded = false;
+
+    deTranslator = new QTranslator();
+    bDeTranslatorLoaded = deTranslator->load(QLocale::German,
+                                             QDir::currentPath() + QDir::separator() + "myAddressBook", "_");
+    bDeTranslatorLoaded = false;
+
+
     gWindow = nullptr;
     bWindow = nullptr;
     importIsRunning = false;
@@ -45,6 +77,11 @@ void MainWindow::init()
 
     if (AddressBookDAO::getGroupsCount() == 0)
         AddressBookDAO::insertGroup(gName);
+
+    QString xmlConfigPath = QDir::homePath() + "/AppData/Local/" + QCoreApplication::applicationName();
+    xmlConfigFile = xmlConfigPath + "/" + QCoreApplication::applicationName() + ".xml";
+
+    readXmlSetting(xmlConfigFile);
 
     ui->tableView->installEventFilter(this);
 
@@ -274,6 +311,62 @@ void MainWindow::readVcfFile(const QString &fileName)
 
     setTableViewModel();
     updateLabel();
+
+}
+
+void MainWindow::exportContactToXml(const QString &filename)
+{
+    QString errorMessage;
+
+    QFileInfo fileInfo(filename);
+
+    QString xmlConfigPath = fileInfo.absoluteFilePath();
+
+    QDir dir(xmlConfigPath);
+
+    if (!dir.exists())
+            dir.mkpath(xmlConfigPath);
+
+    QFile file(filename);
+
+    if (!file.open(QFile::WriteOnly))
+    {
+        QMessageBox::critical(this, this->windowTitle(), file.errorString());
+        return;
+    }
+
+    QXmlStreamWriter xmlWriter(&file);
+
+    xmlWriter.setAutoFormatting(true);
+
+    xmlWriter.writeStartDocument();
+
+    xmlWriter.writeStartElement("Contact");
+
+//    xmlWriter.writeTextElement("Name",  );
+
+
+    xmlWriter.writeEndElement();
+
+
+    xmlWriter.writeEndDocument();
+
+    file.close();
+
+}
+
+bool MainWindow::questionSaveFile()
+{
+    QString filter = tr("Text document (*.txt);;All types (*.*)");
+    QString defaultFilter = tr("Text document (*.txt)");
+
+    QString filename = QFileDialog::getSaveFileName(this, tr("Save as..."),
+                                                     QDir::currentPath(), filter, &defaultFilter);
+
+    if (filename.isEmpty())
+        return false;
+
+    return exportContactToXml(filename);
 
 }
 
@@ -560,6 +653,145 @@ void MainWindow::updateLabel()
     statusLabel->setText(msg);
 
 }
+
+void MainWindow::loadLanguage(const QString& lang)
+{
+    removeAllTranslators();
+
+    if (lang.toLower() == "pl")
+    {
+        bSysTranslatorLoaded = sysTranslator->load("qt_" + lang,
+                                                   QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        bPlTranslatorLoaded = qApp->installTranslator(plTranslator);
+
+        currentLanguage = lang;
+        ui->actionPolisch->setChecked(true);
+
+    }
+    else if (lang.toLower() == "de")
+    {
+        bSysTranslatorLoaded = sysTranslator->load("qt_" + lang,
+                                                   QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        bDeTranslatorLoaded = qApp->installTranslator(deTranslator);
+
+        currentLanguage = lang;
+        ui->actionDeutsch->setChecked(true);
+
+    }
+    else
+    {
+        bSysTranslatorLoaded = sysTranslator->load("qt_en",
+                                                   QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+
+        currentLanguage = lang;
+        ui->actionEnglisch->setChecked(true);
+
+    }
+
+    if (bSysTranslatorLoaded)
+        bSysTranslatorLoaded = qApp->installTranslator(sysTranslator);
+
+}
+
+void MainWindow::removeAllTranslators()
+{
+    if (bPlTranslatorLoaded)
+    {
+        qApp->removeTranslator(plTranslator);
+        bPlTranslatorLoaded = false;
+    }
+    else if (bDeTranslatorLoaded)
+    {
+        qApp->removeTranslator(deTranslator);
+        bDeTranslatorLoaded = false;
+    }
+
+    qApp->removeTranslator(sysTranslator);
+    bSysTranslatorLoaded = false;
+
+    currentLanguage.clear();
+
+}
+
+void MainWindow::writeXmlSettings(const QString &filename)
+{
+    // Sprawdź, czy katalog istnieje, jeśli nie, utwórz go
+    QFileInfo fi(filename);
+
+    // Wyodrębnij tylko nazwę katalogu z pełnej nazwy pliku
+    QString xmlConfigPath = fi.absolutePath();
+
+    QDir dir(xmlConfigPath);
+    if(!dir.exists())
+        dir.mkpath(xmlConfigPath);
+
+    QFile file(filename);
+
+    if (!file.open(QFile::WriteOnly))
+    {
+        QMessageBox::critical(this, this->windowTitle(), file.errorString());
+        return;
+    }
+
+    QXmlStreamWriter xmlWriter(&file);
+
+    // Automatyczne formatowanie pliku XML
+    xmlWriter.setAutoFormatting(true);
+
+    // Naglowek pliku XML zawierajacy informacje o wersji 1.0 oraz kodowanie
+    xmlWriter.writeStartDocument();
+
+    // Zapisuje element poczatkowy (wezel) pliku XML: <Settings>
+    xmlWriter.writeStartElement("Settings");
+
+    // zapisuje atrybut w wezle jako: <Language>en</Language>
+    xmlWriter.writeTextElement("Language", currentLanguage);
+
+    // Konczenie Kontu Settings w stylu: </Settings>
+    xmlWriter.writeEndElement();
+
+    file.close();
+
+}
+
+void MainWindow::readXmlSettings(const QString &filename)
+{
+    QString language;
+    QFile file(filename);
+
+    if (!file.open(QFile::ReadOnly | QFile:: Text))
+        return;
+
+    QXmlStreamReader xmlReader(&file);
+
+    do
+    {
+        if (xmlReader.readNextStartElement())
+        {
+            if (xmlReader.name() == QString("Settings"))
+            {
+                do
+                {
+                    xmlReader.readNext();
+
+                    // Koniec aktualnego wezla?
+                    if (xmlReader.isEndElement())
+                        break;
+
+                    if (xmlReader.name() == QString("Language"))
+                        language = xmlReader.readElementText();
+
+                } while (!xmlReader.atEnd());
+            }
+        }
+    } while(!xmlReader.atEnd());
+
+    file.close();
+
+    loadLanguage(language);
+
+}
+
 
 void MainWindow::on_actionGroupsEdit_triggered()
 {

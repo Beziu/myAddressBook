@@ -35,7 +35,7 @@ QSqlQueryModel *BirthdayWindow::setQueryModel()
 
    int todayOfYear = QDate::currentDate().dayOfYear();
 
-   QString SQL = "SELECT TOP (5) CNAME, CSURNAME, CBIRTHDAY, BDAYOFYEAR FROM ";
+   QString SQL = "SELECT TOP (7) CNAME, CSURNAME, CBIRTHDAY, BDAYOFYEAR FROM ";
    SQL += "Contacts, ContactsBirthdays WHERE Contacts.CID = ContactsBirthdays.CID AND ";
    SQL += "BDAYOFYEAR > " + QString::number(todayOfYear) + " ORDER BY BDAYOFYEAR";
 

@@ -1,5 +1,5 @@
 QT       += core gui
-QT       += sql
+#QT       += sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,33 +10,33 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    BirthdayDialog.cpp \
-    BirthdayWindow.cpp \
-    ContactDialog.cpp \
-    GroupsDialog.cpp \
-    GroupsWindow.cpp \
+    src\BirthdayDialog.cpp \
+    src\BirthdayWindow.cpp \
+    src\ContactDialog.cpp \
+    src\GroupsDialog.cpp \
+    src\GroupsWindow.cpp \
     main.cpp \
-    MainWindow.cpp
+    src\MainWindow.cpp
 
 HEADERS += \
-    BirthdayDialog.h \
-    BirthdayWindow.h \
-    ContactDialog.h \
-    GroupsDialog.h \
-    GroupsWindow.h \
-    MainWindow.h
+    src\BirthdayDialog.h \
+    src\BirthdayWindow.h \
+    src\ContactDialog.h \
+    src\GroupsDialog.h \
+    src\GroupsWindow.h \
+    src\MainWindow.h
 
 FORMS += \
-    BirthdayDialog.ui \
-    BirthdayWindow.ui \
-    ContactDialog.ui \
-    GroupsDialog.ui \
-    GroupsWindow.ui \
-    MainWindow.ui
+    src\BirthdayDialog.ui \
+    src\BirthdayWindow.ui \
+    src\ContactDialog.ui \
+    src\GroupsDialog.ui \
+    src\GroupsWindow.ui \
+    src\MainWindow.ui
 
 TRANSLATIONS += \
-    myAddressBook_en.ts \
-    myAddressBook_pl.ts
+    src\translations\myAddressBook_en.ts \
+    src\translations\myAddressBook_pl.ts
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -45,10 +45,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
    Readme.md \
-   myAddressBook_en.ts
+   src\translations\myAddressBook_en.ts
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/release/ -lDAOLib
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../build-DAOLib-Desktop_Qt_6_2_0_MinGW_64_bit-Debug/debug/ -lDAOLib
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/build-DAOLib/release/ -lDAOLib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/build-DAOLib/debug/ -lDAOLib
 
-INCLUDEPATH += $$PWD/../DAOLib
-DEPENDPATH += $$PWD/../DAOLib
+INCLUDEPATH += $$PWD/DAOLib
+DEPENDPATH += $$PWD/DAOLib

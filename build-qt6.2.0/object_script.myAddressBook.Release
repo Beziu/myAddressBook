@@ -1,0 +1,13 @@
+release/BirthdayDialog.o
+release/BirthdayWindow.o
+release/ContactDialog.o
+release/GroupsDialog.o
+release/GroupsWindow.o
+release/main.o
+release/MainWindow.o
+release/moc_BirthdayDialog.o
+release/moc_BirthdayWindow.o
+release/moc_ContactDialog.o
+release/moc_GroupsDialog.o
+release/moc_GroupsWindow.o
+release/moc_MainWindow.o

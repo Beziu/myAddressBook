@@ -1,0 +1,13 @@
+debug/BirthdayDialog.o
+debug/BirthdayWindow.o
+debug/ContactDialog.o
+debug/GroupsDialog.o
+debug/GroupsWindow.o
+debug/main.o
+debug/MainWindow.o
+debug/moc_BirthdayDialog.o
+debug/moc_BirthdayWindow.o
+debug/moc_ContactDialog.o
+debug/moc_GroupsDialog.o
+debug/moc_GroupsWindow.o
+debug/moc_MainWindow.o

@@ -44,6 +44,7 @@ QSqlQueryModel *BirthdayWindow::setQueryModel()
    model->setHeaderData(model->record().indexOf("CSURNAME"), Qt::Horizontal, "Surname");
    model->setHeaderData(model->record().indexOf("CBIRTHDAY"), Qt::Horizontal, "Birthday");
 
+   statusLabel->setText(QString::number(model->record().count()));
    updateLabel();
 
    return model;
